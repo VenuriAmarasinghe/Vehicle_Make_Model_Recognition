@@ -23,27 +23,16 @@ efficientnet_transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225])
 ])
 
-#for training data add augmentations 
-
-img_augmentation = transforms.Compose([
-    transforms.RandomRotation(degrees=60),                     # Rotation
-    transforms.RandomResizedCrop(224, scale=(0.7, 1.2)),       # Zoom (in/out)
-    transforms.ColorJitter(brightness=0.4, contrast=0.3),      # Brightness and contrast
-    transforms.RandomHorizontalFlip(),                         # Horizontal flip                           
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],           # EfficientNet normalization
-                         std=[0.229, 0.224, 0.225]),
-])
 # Paths
 train_path = "/home/kalinga/DomainGeneralization/venuri/Vehicle_Make_Model_Recognition/data/train"
 test_path = "/home/kalinga/DomainGeneralization/venuri/Vehicle_Make_Model_Recognition/data/test_new"
 
 # Datasets
-train_dataset = datasets.ImageFolder(root=train_path, transform=img_augmentation)
+train_dataset = datasets.ImageFolder(root=train_path, transform=efficientnet_transform)
 test_dataset = datasets.ImageFolder(root=test_path, transform=efficientnet_transform)
 
 # DataLoaders
-train_loader = DataLoader(train_dataset, batch_size=80, shuffle=True, num_workers=4)
+
 test_loader = DataLoader(test_dataset, batch_size=80, shuffle=False, num_workers=4)
 model = EfficientNet_Vehicle(base_model, num_classes=num_classes)
 
