@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import f1_score
-from train.py import EfficientNet_Vehicle, base_model,num_classes
+import torch.nn as nn
 import os
 import torch
 import timm
@@ -22,13 +22,34 @@ efficientnet_transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406],  
                          std=[0.229, 0.224, 0.225])
 ])
+class EfficientNet_Vehicle(nn.Module):
+    def __init__(self, base_model, num_classes, dropout_rate=0.2):
+        super(EfficientNet_Vehicle, self).__init__()
+        self.base = base_model  # efficientnet_b4 backbone
+        self.bn = nn.BatchNorm1d(base_model.num_features)
+        self.dropout = nn.Dropout(p=dropout_rate)
+        self.fc = nn.Linear(base_model.num_features, num_classes)
 
+    def forward(self, x):
+        x = self.base(x)             
+        x = self.bn(x)
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+    
+# Load pretrained model without the final layer and add a layer as the classifier 
+base_model = timm.create_model('efficientnet_b0', pretrained=True, num_classes=0, global_pool='avg')
 # Paths
-train_path = "/home/kalinga/DomainGeneralization/venuri/Vehicle_Make_Model_Recognition/data/train"
-test_path = "/home/kalinga/DomainGeneralization/venuri/Vehicle_Make_Model_Recognition/data/test_new"
 
+test_path = "/home/kalinga/DomainGeneralization/venuri/Vehicle_Make_Model_Recognition/data/test_new"
+# Read class names from file
+with open("class_names.txt", "r") as f:
+    class_names = [line.strip() for line in f if line.strip()]
+
+# Number of classes
+num_classes = len(class_names)
 # Datasets
-train_dataset = datasets.ImageFolder(root=train_path, transform=efficientnet_transform)
+
 test_dataset = datasets.ImageFolder(root=test_path, transform=efficientnet_transform)
 
 # DataLoaders
@@ -68,7 +89,7 @@ y_pred_top1 = all_preds.argmax(dim=1).numpy()
 
 # Assuming test_dataset.classes is a list: index -> class name
 idx_to_class_test = test_dataset.classes
-idx_to_class_train = train_dataset.classes
+idx_to_class_train = class_names
 
 # Convert all true and predicted indices to class names
 y_true_names = [idx_to_class_test[idx] for idx in y_true]
@@ -98,10 +119,6 @@ f1_weighted = f1_score(y_true_names, y_pred_names, average='weighted')
 print(f"F1 Score (Macro): {f1_macro:.4f}")
 print(f"F1 Score (Weighted): {f1_weighted:.4f}")
 
-
-# Suppose class_names = train_dataset.classes
-class_names = train_dataset.classes
-# Encode class names if needed
 
 le = LabelEncoder()
 le.fit(class_names)
